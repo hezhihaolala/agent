@@ -6,6 +6,9 @@ from sqlalchemy import select
 
 from .api.auth import router as auth_router
 from .api.archives import router as archives_router
+from .api.agent import router as agent_router
+from .api.drafts import router as drafts_router
+from .agent.client import ModelClient, OpenAICompatibleClient, UnavailableModelClient
 from .api.genealogy import router as genealogy_router
 from .config import Settings
 from .database import Base, create_database
@@ -13,7 +16,10 @@ from .models import AdminUser
 from .security import hash_password, utcnow
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    model_client: ModelClient | None = None,
+) -> FastAPI:
     app_settings = settings or Settings()
     engine, session_factory = create_database(app_settings)
 
@@ -48,8 +54,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="归源族谱智能体", lifespan=lifespan)
     app.state.settings = app_settings
     app.state.session_factory = session_factory
+    app.state.model_client = model_client or (
+        OpenAICompatibleClient(app_settings)
+        if app_settings.model_api_key
+        else UnavailableModelClient()
+    )
     app.include_router(auth_router)
     app.include_router(archives_router)
+    app.include_router(agent_router)
+    app.include_router(drafts_router)
     app.include_router(genealogy_router)
 
     @app.get("/api/health")

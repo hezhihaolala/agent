@@ -116,3 +116,20 @@ class SourceLink(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     source: Mapped[Source] = relationship(back_populates="links")
+
+
+class ChangeDraft(Base):
+    __tablename__ = "change_drafts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("admin_users.id"), index=True)
+    status: Mapped[str] = mapped_column(String(30), default="pending", index=True)
+    raw_input: Mapped[str] = mapped_column(Text)
+    payload_json: Mapped[str] = mapped_column(Text)
+    prompt_version: Mapped[str] = mapped_column(String(30), default="v1")
+    model_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

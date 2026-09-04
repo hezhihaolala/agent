@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = False
     session_ttl_hours: int = 24
     max_upload_bytes: int = 20 * 1024 * 1024
+    model_api_key: str | None = None
+    model_base_url: str | None = None
+    model_name: str = "gpt-4o-mini"
+    model_timeout_seconds: float = 30.0
 
     model_config = SettingsConfigDict(
         env_prefix="GUIYUAN_",

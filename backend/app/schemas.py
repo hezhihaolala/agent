@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class LoginRequest(BaseModel):
@@ -114,3 +114,59 @@ class SourceResponse(BaseModel):
 
 class SourceDetailResponse(SourceResponse):
     links: list[SourceLinkResponse]
+
+
+class AgentIntent(BaseModel):
+    kind: Literal["relationship_query", "create_person", "create_child"]
+    source_name: str | None = None
+    target_name: str | None = None
+    parent_name: str | None = None
+    person_name: str | None = None
+    gender: Gender = "unknown"
+
+    @model_validator(mode="after")
+    def validate_required_fields(self) -> "AgentIntent":
+        required = {
+            "relationship_query": ("source_name", "target_name"),
+            "create_person": ("person_name",),
+            "create_child": ("parent_name", "person_name"),
+        }[self.kind]
+        if any(not getattr(self, field) for field in required):
+            raise ValueError(f"{self.kind} 缺少必要字段")
+        return self
+
+
+class AgentQuery(BaseModel):
+    message: str = Field(min_length=1, max_length=4000)
+
+
+class SourceCitation(BaseModel):
+    id: str
+    title: str
+    verification_status: VerificationStatus
+
+
+class AgentAnswer(BaseModel):
+    type: Literal["answer"] = "answer"
+    answer: str
+    relationship: KinshipResponse
+    sources: list[SourceCitation]
+    verification_status: VerificationStatus
+
+
+class DraftPreview(BaseModel):
+    type: Literal["draft"] = "draft"
+    draft_id: str
+    status: Literal["pending"] = "pending"
+    summary: str
+    payload: dict
+
+
+class DraftResponse(BaseModel):
+    id: str
+    status: Literal["pending", "confirmed", "rejected"]
+    raw_input: str
+    payload: dict
+    created_at: datetime
+    updated_at: datetime
+    confirmed_at: datetime | None
