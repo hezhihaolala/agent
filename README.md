@@ -27,4 +27,4 @@ npm run build
 
 这是用于确认信息架构、视觉风格和核心操作流程的前端 Demo。待界面与流程确认后，再接入真实后端、族谱数据模型和 OpenAI 兼容 API。
 
-产品整体方向与 MVP 范围见 [产品设计文档](docs/product-design.md)。
+产品整体方向与 MVP 范围见 [产品设计文档](docs/product-design.md)，系统实现边界见 [技术方案](docs/technical-design.md)。
