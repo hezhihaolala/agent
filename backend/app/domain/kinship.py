@@ -13,10 +13,15 @@ class KinshipStep:
 class KinshipResult:
     label: str
     steps: list[KinshipStep]
+    relationship_ids: list[str]
 
 
 def _value(item: Any, name: str) -> Any:
     return item[name] if isinstance(item, dict) else getattr(item, name)
+
+
+def _optional_value(item: Any, name: str) -> Any | None:
+    return item.get(name) if isinstance(item, dict) else getattr(item, name, None)
 
 
 def _label(directions: list[str], path: list[str], people: dict[str, Any]) -> str:
@@ -69,27 +74,30 @@ def find_relationship_path(
     if source_id not in person_map or target_id not in person_map:
         return None
 
-    graph: dict[str, list[tuple[str, str]]] = {person_id: [] for person_id in person_map}
+    graph: dict[str, list[tuple[str, str, str | None]]] = {
+        person_id: [] for person_id in person_map
+    }
     for relationship in relationships:
         person_id = _value(relationship, "person_id")
         relative_id = _value(relationship, "relative_id")
         kind = _value(relationship, "kind")
+        relationship_id = _optional_value(relationship, "id")
         if person_id not in graph or relative_id not in graph:
             continue
         if kind == "parent":
-            graph[person_id].append((relative_id, "up"))
-            graph[relative_id].append((person_id, "down"))
+            graph[person_id].append((relative_id, "up", relationship_id))
+            graph[relative_id].append((person_id, "down", relationship_id))
         elif kind == "spouse":
-            graph[person_id].append((relative_id, "spouse"))
-            graph[relative_id].append((person_id, "spouse"))
+            graph[person_id].append((relative_id, "spouse", relationship_id))
+            graph[relative_id].append((person_id, "spouse", relationship_id))
         elif kind in {"sibling", "paternal_cousin"}:
-            graph[person_id].append((relative_id, kind))
-            graph[relative_id].append((person_id, kind))
+            graph[person_id].append((relative_id, kind, relationship_id))
+            graph[relative_id].append((person_id, kind, relationship_id))
 
-    queue = deque([(source_id, [source_id], [])])
+    queue = deque([(source_id, [source_id], [], [])])
     visited = {source_id}
     while queue:
-        current, path, directions = queue.popleft()
+        current, path, directions, relationship_ids = queue.popleft()
         if current == target_id:
             return KinshipResult(
                 label=_label(directions, path, person_map),
@@ -97,9 +105,17 @@ def find_relationship_path(
                     KinshipStep(person_id=item, person_name=_value(person_map[item], "name"))
                     for item in path
                 ],
+                relationship_ids=[item for item in relationship_ids if item],
             )
-        for neighbor, direction in graph[current]:
+        for neighbor, direction, relationship_id in graph[current]:
             if neighbor not in visited:
                 visited.add(neighbor)
-                queue.append((neighbor, [*path, neighbor], [*directions, direction]))
+                queue.append(
+                    (
+                        neighbor,
+                        [*path, neighbor],
+                        [*directions, direction],
+                        [*relationship_ids, relationship_id],
+                    )
+                )
     return None

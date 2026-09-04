@@ -3,7 +3,7 @@ from pydantic import ValidationError
 
 from ..agent.client import ModelOutputError, ModelUnavailable
 from ..agent.orchestrator import AgentOrchestrator, AmbiguousPerson, MissingRelationship
-from ..schemas import AgentAnswer, AgentQuery, DraftPreview
+from ..schemas import AgentAnswer, AgentQuery, DraftPreview, RelativeListAnswer
 from ..services.drafts import DraftConflict, DraftNotFound
 from .auth import DbSession, WriteSession
 
@@ -11,7 +11,7 @@ from .auth import DbSession, WriteSession
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 
 
-@router.post("/query", response_model=AgentAnswer | DraftPreview)
+@router.post("/query", response_model=AgentAnswer | RelativeListAnswer | DraftPreview)
 def query_agent(payload: AgentQuery, request: Request, db: DbSession, current: WriteSession):
     orchestrator = AgentOrchestrator(
         db,

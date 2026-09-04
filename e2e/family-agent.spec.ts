@@ -44,6 +44,10 @@ test('登录、建关系、关系问答和草稿确认构成完整流程', async
   await page.getByRole('button', { name: '发送' }).click()
   await expect(page.getByText(`${motherName}是${childName}的母亲。当前来源不足，结论待核实。`)).toBeVisible()
 
+  await page.getByLabel('向归源提问').fill(`${childName}的父母是谁`)
+  await page.getByRole('button', { name: '发送' }).click()
+  await expect(page.getByText(`${childName}的父母是${motherName}。当前来源不足，结论待核实。`)).toBeVisible()
+
   await page.getByLabel('向归源提问').fill(`新增${draftName}`)
   await page.getByRole('button', { name: '发送' }).click()
   await expect(page.getByRole('heading', { name: '变更预览' })).toBeVisible()

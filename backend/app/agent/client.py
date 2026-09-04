@@ -40,8 +40,10 @@ class OpenAICompatibleClient:
     def parse_request(self, text: str) -> AgentIntent:
         system_prompt = (
             "你是中文族谱请求解析器。只返回 JSON，不回答问题。"
-            "kind 只能是 relationship_query、create_person、create_child。"
+            "kind 只能是 relationship_query、relative_lookup、create_person、create_child。"
             "关系查询填写 source_name、target_name；新增人物填写 person_name、gender；"
+            "查询某人的一类亲属时使用 relative_lookup，并填写 source_name、relation_type；"
+            "relation_type 只能是 parents、father、mother、children、spouses、siblings、paternal_cousins。"
             "新增子女还要填写 parent_name。gender 只能是 male、female、unknown。"
         )
         try:

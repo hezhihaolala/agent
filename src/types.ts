@@ -47,13 +47,24 @@ export type AuditLog = {
   created_at: string
 }
 
+export type Kinship = {
+  label: string
+  steps: Array<{ person_id: string; person_name: string }>
+}
+
 export type AgentAnswer = {
   type: 'answer'
   answer: string
-  relationship: {
-    label: string
-    steps: Array<{ person_id: string; person_name: string }>
-  }
+  relationship: Kinship
+  sources: Array<Pick<Source, 'id' | 'title' | 'verification_status'>>
+  verification_status: VerificationStatus
+}
+
+export type RelativeListAnswer = {
+  type: 'relative_list'
+  answer: string
+  relation_type: 'parents' | 'father' | 'mother' | 'children' | 'spouses' | 'siblings' | 'paternal_cousins'
+  relationships: Kinship[]
   sources: Array<Pick<Source, 'id' | 'title' | 'verification_status'>>
   verification_status: VerificationStatus
 }
@@ -71,4 +82,5 @@ export type DraftPreview = {
   }
 }
 
-export type AgentResult = AgentAnswer | DraftPreview
+export type AnswerResult = AgentAnswer | RelativeListAnswer
+export type AgentResult = AnswerResult | DraftPreview

@@ -108,6 +108,37 @@ describe('归源家族记忆助手', () => {
     expect(screen.getByText('《陈氏家谱》续修本')).toBeInTheDocument()
   })
 
+  it('聊天页展示无需模型解析的父母列表', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/api/auth/me')) return response({ username: 'admin', csrf_token: 'csrf-token' })
+      if (url.endsWith('/api/agent/query')) return response({
+        type: 'relative_list',
+        answer: '贺志豪的父母是贺万彬、王录飞。当前来源不足，结论待核实。',
+        relation_type: 'parents',
+        relationships: [
+          { label: '父亲', steps: [{ person_id: 'p1', person_name: '贺志豪' }, { person_id: 'p2', person_name: '贺万彬' }] },
+          { label: '母亲', steps: [{ person_id: 'p1', person_name: '贺志豪' }, { person_id: 'p3', person_name: '王录飞' }] },
+        ],
+        sources: [],
+        verification_status: 'unverified',
+      })
+      return dataResponse(url)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+
+    const mainNav = await screen.findByRole('navigation', { name: '主导航' })
+    await user.click(within(mainNav).getByRole('button', { name: '智能体' }))
+    await user.type(screen.getByLabelText('向归源提问'), '贺志豪的父母是谁')
+    await user.click(screen.getByRole('button', { name: '发送' }))
+
+    expect(await screen.findByText('贺志豪的父母是贺万彬、王录飞。当前来源不足，结论待核实。')).toBeInTheDocument()
+    expect(screen.getByText('父亲')).toBeInTheDocument()
+    expect(screen.getByText('母亲')).toBeInTheDocument()
+  })
+
   it('智能体草稿确认前不改变人数，确认后重新加载成员', async () => {
     const initial = [person('p1', '张明远')]
     const confirmed = [...initial, person('p2', '张予安')]

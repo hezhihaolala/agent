@@ -137,3 +137,128 @@ def test_conflicting_source_is_marked_for_verification(tmp_path):
     assert response.status_code == 200
     assert response.json()["verification_status"] == "conflicting"
     assert "待核实" in response.json()["answer"]
+
+
+def test_parent_lookup_bypasses_model_and_returns_all_parents(tmp_path):
+    with agent_client(tmp_path, {"kind": "unexpected"}) as (client, model):
+        child = add_person(client, "贺志豪", "male")
+        father = add_person(client, "贺万彬", "male")
+        mother = add_person(client, "王录飞", "female")
+        for parent in (father, mother):
+            client.post(
+                "/api/relationships",
+                json={"kind": "parent", "person_id": child["id"], "relative_id": parent["id"]},
+            )
+
+        response = client.post("/api/agent/query", json={"message": "贺志豪的父母是谁"})
+
+    assert response.status_code == 200
+    assert model.messages == []
+    assert response.json()["type"] == "relative_list"
+    assert response.json()["relation_type"] == "parents"
+    assert [item["steps"][-1]["person_name"] for item in response.json()["relationships"]] == [
+        "贺万彬",
+        "王录飞",
+    ]
+    assert response.json()["answer"].startswith("贺志豪的父母是贺万彬、王录飞")
+
+
+def test_sibling_and_paternal_cousin_lookup_use_formal_relationships(tmp_path):
+    with agent_client(tmp_path, {"kind": "unexpected"}) as (client, model):
+        source = add_person(client, "贺志豪", "male")
+        sister = add_person(client, "贺志兰", "female")
+        cousin = add_person(client, "贺志梅", "female")
+        client.post(
+            "/api/relationships",
+            json={"kind": "sibling", "person_id": source["id"], "relative_id": sister["id"]},
+        )
+        client.post(
+            "/api/relationships",
+            json={"kind": "paternal_cousin", "person_id": source["id"], "relative_id": cousin["id"]},
+        )
+
+        sibling = client.post("/api/agent/query", json={"message": "贺志豪的兄弟姊妹是谁？"})
+        paternal_cousin = client.post("/api/agent/query", json={"message": "贺志豪的堂兄弟姊妹是谁"})
+
+    assert sibling.status_code == 200
+    assert sibling.json()["relationships"][0]["label"] == "姐妹"
+    assert paternal_cousin.status_code == 200
+    assert paternal_cousin.json()["relationships"][0]["label"] == "堂姐妹"
+    assert model.messages == []
+
+
+def test_inferred_sibling_lookup_includes_unknown_gender(tmp_path):
+    with agent_client(tmp_path, {"kind": "unexpected"}) as (client, model):
+        source = add_person(client, "贺志豪", "male")
+        sibling = add_person(client, "贺志宁", "unknown")
+        parent = add_person(client, "贺万彬", "male")
+        for child in (source, sibling):
+            client.post(
+                "/api/relationships",
+                json={"kind": "parent", "person_id": child["id"], "relative_id": parent["id"]},
+            )
+
+        response = client.post("/api/agent/query", json={"message": "贺志豪的兄弟姊妹是谁"})
+
+    assert response.status_code == 200
+    assert response.json()["relationships"][0]["label"] == "兄弟姐妹"
+    assert model.messages == []
+
+
+def test_relationship_answer_only_uses_sources_from_the_selected_edge(tmp_path):
+    intent = {
+        "kind": "relationship_query",
+        "source_name": "贺志豪",
+        "target_name": "王录飞",
+    }
+    with agent_client(tmp_path, intent) as (client, _):
+        child = add_person(client, "贺志豪", "male")
+        mother = add_person(client, "王录飞", "female")
+        parent = client.post(
+            "/api/relationships",
+            json={"kind": "parent", "person_id": child["id"], "relative_id": mother["id"]},
+        ).json()
+        spouse = client.post(
+            "/api/relationships",
+            json={"kind": "spouse", "person_id": child["id"], "relative_id": mother["id"]},
+        ).json()
+        for title, status, relationship_id in (
+            ("父母档案", "verified", parent["id"]),
+            ("错误配偶档案", "conflicting", spouse["id"]),
+        ):
+            source = client.post(
+                "/api/sources",
+                data={"title": title, "source_type": "text", "verification_status": status},
+                files={"file": (f"{title}.txt", title.encode(), "text/plain")},
+            ).json()
+            client.post(
+                f"/api/sources/{source['id']}/links",
+                json={"entity_type": "relationship", "entity_id": relationship_id},
+            )
+
+        response = client.post("/api/agent/query", json={"message": "查询关系"})
+
+    assert response.status_code == 200
+    assert response.json()["verification_status"] == "verified"
+    assert [source["title"] for source in response.json()["sources"]] == ["父母档案"]
+
+
+def test_polite_relative_question_falls_back_to_model(tmp_path):
+    intent = {
+        "kind": "relative_lookup",
+        "source_name": "贺志豪",
+        "relation_type": "parents",
+    }
+    with agent_client(tmp_path, intent) as (client, model):
+        child = add_person(client, "贺志豪", "male")
+        mother = add_person(client, "王录飞", "female")
+        client.post(
+            "/api/relationships",
+            json={"kind": "parent", "person_id": child["id"], "relative_id": mother["id"]},
+        )
+
+        message = "请问贺志豪的父母是谁"
+        response = client.post("/api/agent/query", json={"message": message})
+
+    assert response.status_code == 200
+    assert model.messages == [message]

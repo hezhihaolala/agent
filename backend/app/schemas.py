@@ -21,6 +21,15 @@ class AuthResponse(BaseModel):
 
 VerificationStatus = Literal["verified", "unverified", "conflicting"]
 Gender = Literal["male", "female", "unknown"]
+RelativeType = Literal[
+    "parents",
+    "father",
+    "mother",
+    "children",
+    "spouses",
+    "siblings",
+    "paternal_cousins",
+]
 
 
 class PersonCreate(BaseModel):
@@ -122,9 +131,12 @@ class SourceDetailResponse(SourceResponse):
 
 
 class AgentIntent(BaseModel):
-    kind: Literal["relationship_query", "create_person", "create_child"]
+    kind: Literal[
+        "relationship_query", "relative_lookup", "create_person", "create_child"
+    ]
     source_name: str | None = None
     target_name: str | None = None
+    relation_type: RelativeType | None = None
     parent_name: str | None = None
     person_name: str | None = None
     gender: Gender = "unknown"
@@ -133,6 +145,7 @@ class AgentIntent(BaseModel):
     def validate_required_fields(self) -> "AgentIntent":
         required = {
             "relationship_query": ("source_name", "target_name"),
+            "relative_lookup": ("source_name", "relation_type"),
             "create_person": ("person_name",),
             "create_child": ("parent_name", "person_name"),
         }[self.kind]
@@ -155,6 +168,15 @@ class AgentAnswer(BaseModel):
     type: Literal["answer"] = "answer"
     answer: str
     relationship: KinshipResponse
+    sources: list[SourceCitation]
+    verification_status: VerificationStatus
+
+
+class RelativeListAnswer(BaseModel):
+    type: Literal["relative_list"] = "relative_list"
+    answer: str
+    relation_type: RelativeType
+    relationships: list[KinshipResponse]
     sources: list[SourceCitation]
     verification_status: VerificationStatus
 
