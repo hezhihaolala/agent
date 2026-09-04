@@ -170,6 +170,11 @@ button { cursor: pointer; }
 .login-card input,.editor-form input,.editor-form select,.editor-form textarea { width: 100%; padding: 10px 11px; color: var(--ink); border: 1px solid #d3d2c9; border-radius: 8px; background: #fff; outline: none; }
 .login-card input:focus,.editor-form input:focus,.editor-form select:focus,.editor-form textarea:focus { border-color: #698879; box-shadow: 0 0 0 3px rgba(82,117,100,.09); }
 .form-error { margin: 0 !important; color: #9b453c !important; font-size: 10px !important; }
+.form-success { margin: 0; color: var(--green); font-size: 10px; }
+.password-form { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)) auto; align-items: end; gap: 10px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.password-form h3 { grid-column: 1/-1; margin: 0; font: 600 13px 'Noto Serif SC',serif; }
+.password-form label { display: grid; gap: 5px; color: var(--muted); font-size: 9px; }
+.password-form input { min-width: 0; padding: 9px; border: 1px solid #d3d2c9; border-radius: 8px; background: white; }
 .global-error { display: flex; justify-content: space-between; padding: 10px 20px; color: #8e3f37; background: #f5ded8; font-size: 11px; }
 .global-error button { border: 0; background: transparent; color: inherit; }
 .people-preview-grid,.people-directory { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-top: 28px; }
@@ -203,4 +208,5 @@ button { cursor: pointer; }
   .editor-card { padding: 20px; }
   .login-card { padding: 28px 22px; }
   .relationship-manager form { grid-template-columns: 1fr; }
+  .password-form { grid-template-columns: 1fr; }
 }

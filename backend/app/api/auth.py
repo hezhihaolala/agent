@@ -2,13 +2,13 @@ from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import AdminSession, AdminUser
-from ..schemas import AuthResponse, LoginRequest
-from ..security import hash_token, is_expired, new_token, utcnow, verify_password
+from ..models import AdminSession, AdminUser, AuditLog
+from ..schemas import AuthResponse, LoginRequest, PasswordChangeRequest
+from ..security import hash_password, hash_token, is_expired, new_token, utcnow, verify_password
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -98,6 +98,31 @@ def current_user(
     if not csrf_token or hash_token(csrf_token) != current.csrf_hash:
         raise HTTPException(status_code=401, detail="登录已失效")
     return AuthResponse(username=current.user.username, csrf_token=csrf_token)
+
+
+@router.post("/password", status_code=204)
+def change_password(payload: PasswordChangeRequest, db: DbSession, current: WriteSession):
+    user = current.user
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="当前密码不正确")
+    user.password_hash = hash_password(payload.new_password)
+    db.execute(
+        delete(AdminSession).where(
+            AdminSession.user_id == user.id,
+            AdminSession.id != current.id,
+        )
+    )
+    db.add(
+        AuditLog(
+            user_id=user.id,
+            action="admin.password_changed",
+            entity_type="admin_user",
+            entity_id=user.id,
+            summary="管理员密码已更新",
+            created_at=utcnow(),
+        )
+    )
+    db.commit()
 
 
 @router.post("/logout", status_code=204)

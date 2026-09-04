@@ -173,4 +173,30 @@ describe('归源家族记忆助手', () => {
 
     expect(await screen.findByText('张明远 的父母是 陈素贞')).toBeInTheDocument()
   })
+
+  it('设置页验证当前密码后提交新密码', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/api/auth/me')) return response({ username: 'admin', csrf_token: 'csrf-token' })
+      if (url.endsWith('/api/auth/password')) {
+        expect(init?.method).toBe('POST')
+        expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('csrf-token')
+        expect(JSON.parse(String(init?.body))).toEqual({ current_password: 'old password', new_password: 'new secure password' })
+        return response(null, 204)
+      }
+      return dataResponse(url)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+
+    const mainNav = await screen.findByRole('navigation', { name: '主导航' })
+    await user.click(within(mainNav).getByRole('button', { name: '设置' }))
+    await user.type(screen.getByLabelText('当前密码'), 'old password')
+    await user.type(screen.getByLabelText('新密码'), 'new secure password')
+    await user.type(screen.getByLabelText('确认新密码'), 'new secure password')
+    await user.click(screen.getByRole('button', { name: '修改密码' }))
+
+    expect(await screen.findByText('密码已更新')).toBeInTheDocument()
+  })
 })

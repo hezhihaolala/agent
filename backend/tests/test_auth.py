@@ -78,3 +78,56 @@ def test_logout_requires_matching_csrf_token(tmp_path):
     assert rejected.status_code == 403
     assert accepted.status_code == 204
     assert current.status_code == 401
+
+
+def test_admin_can_change_password_with_current_password_and_csrf(tmp_path):
+    with app_client(tmp_path) as client:
+        login = client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "correct horse battery staple"},
+        )
+        changed = client.post(
+            "/api/auth/password",
+            headers={"X-CSRF-Token": login.json()["csrf_token"]},
+            json={
+                "current_password": "correct horse battery staple",
+                "new_password": "new correct horse battery staple",
+            },
+        )
+        audit_logs = client.get("/api/audit-logs")
+        old_login = client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "correct horse battery staple"},
+        )
+        new_login = client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "new correct horse battery staple"},
+        )
+
+    assert changed.status_code == 204
+    assert any(item["action"] == "admin.password_changed" for item in audit_logs.json())
+    assert old_login.status_code == 401
+    assert new_login.status_code == 200
+
+
+def test_password_change_rejects_wrong_current_or_short_new_password(tmp_path):
+    with app_client(tmp_path) as client:
+        login = client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "correct horse battery staple"},
+        )
+        headers = {"X-CSRF-Token": login.json()["csrf_token"]}
+        wrong_current = client.post(
+            "/api/auth/password",
+            headers=headers,
+            json={"current_password": "wrong", "new_password": "new correct horse battery staple"},
+        )
+        short_new = client.post(
+            "/api/auth/password",
+            headers=headers,
+            json={"current_password": "correct horse battery staple", "new_password": "too-short"},
+        )
+
+    assert wrong_current.status_code == 400
+    assert wrong_current.json()["detail"] == "当前密码不正确"
+    assert short_new.status_code == 422

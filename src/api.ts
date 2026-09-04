@@ -43,6 +43,7 @@ export const api = {
     await request<void>('/api/auth/logout', { method: 'POST' })
     csrfToken = ''
   },
+  changePassword: (currentPassword: string, newPassword: string) => request<void>('/api/auth/password', { method: 'POST', body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }) }),
   people: () => request<Person[]>('/api/persons'),
   createPerson: (payload: Partial<Person>) => request<Person>('/api/persons', { method: 'POST', body: JSON.stringify(payload) }),
   updatePerson: (id: string, payload: Partial<Person>) => request<Person>(`/api/persons/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
