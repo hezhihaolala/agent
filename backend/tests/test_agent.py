@@ -201,7 +201,7 @@ def test_inferred_sibling_lookup_includes_unknown_gender(tmp_path):
         response = client.post("/api/agent/query", json={"message": "贺志豪的兄弟姊妹是谁"})
 
     assert response.status_code == 200
-    assert response.json()["relationships"][0]["label"] == "兄弟姐妹"
+    assert response.json()["relationships"][0]["label"] == "兄弟姊妹（同父，母系不详）"
     assert model.messages == []
 
 

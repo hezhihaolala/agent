@@ -13,6 +13,8 @@ class Relationship:
     kind: str
     person_id: str
     relative_id: str
+    id: str | None = None
+    sibling_type: str | None = None
 
 
 def test_maternal_grandfather_path():
@@ -68,7 +70,8 @@ def test_direct_and_sibling_labels_are_deterministic():
     )
 
     assert parent is not None and parent.label == "父亲"
-    assert sibling is not None and sibling.label == "兄弟"
+    assert sibling is not None
+    assert sibling.label == "兄弟姊妹（同父，母系不详）"
 
 
 def test_explicit_sibling_and_paternal_cousin_labels_use_target_gender():
@@ -113,3 +116,107 @@ def test_paternal_cousin_is_derived_from_shared_paternal_grandparent():
     result = find_relationship_path(people, relationships, "source", "cousin")
 
     assert result is not None and result.label == "堂姐妹"
+
+
+def test_inferred_parent_path_exposes_origin_evidence_and_conflict():
+    from backend.app.domain.kinship import find_relationship_path
+
+    people = [
+        Person("lan", "贺志兰", "female"),
+        Person("hao", "贺志豪", "male"),
+        Person("father", "贺万彬", "male"),
+        Person("other_father", "贺万成", "male"),
+    ]
+    relationships = [
+        Relationship("sibling", "hao", "lan", "s", "full"),
+        Relationship("parent", "hao", "father", "f"),
+        Relationship("parent", "lan", "other_father", "lf"),
+    ]
+
+    inferred = find_relationship_path(people, relationships, "lan", "father")
+    direct = find_relationship_path(
+        people, relationships, "lan", "other_father"
+    )
+
+    assert inferred is not None
+    assert inferred.label == "父亲"
+    assert inferred.origin == "inferred"
+    assert inferred.conflicting is True
+    assert inferred.relationship_ids == ["s", "f"]
+    assert [step.person_id for step in inferred.steps] == ["lan", "hao", "father"]
+    assert direct is not None
+    assert direct.origin == "direct"
+    assert direct.conflicting is False
+
+
+def test_direct_only_path_does_not_use_an_inferred_edge():
+    from backend.app.domain.kinship import find_relationship_path
+
+    people = [
+        Person("lan", "贺志兰", "female"),
+        Person("hao", "贺志豪", "male"),
+        Person("father", "贺万彬", "male"),
+    ]
+    relationships = [
+        Relationship("sibling", "hao", "lan", "s", "full"),
+        Relationship("parent", "hao", "father", "f"),
+    ]
+
+    inferred = find_relationship_path(people, relationships, "lan", "father")
+    direct_only = find_relationship_path(
+        people,
+        relationships,
+        "lan",
+        "father",
+        include_inferred=False,
+    )
+
+    assert inferred is not None and inferred.label == "父亲"
+    assert inferred.origin == "inferred"
+    assert direct_only is not None and direct_only.label == "亲属"
+    assert direct_only.origin == "direct"
+
+
+def test_partial_parent_sibling_inference_uses_cautious_label():
+    from backend.app.domain.kinship import find_relationship_path
+
+    people = [
+        Person("hao", "贺志豪", "male"),
+        Person("lan", "贺志兰", "female"),
+        Person("father", "贺万彬", "male"),
+    ]
+    relationships = [
+        Relationship("parent", "hao", "father", "hf"),
+        Relationship("parent", "lan", "father", "lf"),
+    ]
+
+    result = find_relationship_path(people, relationships, "hao", "lan")
+
+    assert result is not None
+    assert result.label == "兄弟姊妹（同父，母系不详）"
+    assert result.origin == "inferred"
+
+
+def test_direct_sibling_edge_wins_over_a_parent_derived_edge():
+    from backend.app.domain.kinship import find_relationship_path
+
+    people = [
+        Person("hao", "贺志豪", "male"),
+        Person("lan", "贺志兰", "female"),
+        Person("father", "贺万彬", "male"),
+        Person("mother", "王录飞", "female"),
+    ]
+    relationships = [
+        Relationship("sibling", "hao", "lan", "s", "unknown"),
+        Relationship("parent", "hao", "father", "hf"),
+        Relationship("parent", "lan", "father", "lf"),
+        Relationship("parent", "hao", "mother", "hm"),
+        Relationship("parent", "lan", "mother", "lm"),
+    ]
+
+    result = find_relationship_path(people, relationships, "hao", "lan")
+
+    assert result is not None
+    assert result.label == "姐妹"
+    assert result.origin == "direct"
+    assert result.relationship_ids == ["s"]
