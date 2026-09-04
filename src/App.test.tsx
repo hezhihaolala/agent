@@ -1,11 +1,20 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
+import productDesign from '../docs/product-design.md?raw'
 import { App } from './App'
 
 afterEach(cleanup)
 
 describe('家谱智能体 Demo', () => {
+  it('产品设计文档覆盖 MVP 的关键决策', () => {
+    expect(productDesign).toContain('## 1. 产品定位')
+    expect(productDesign).toContain('## 3. 主要功能')
+    expect(productDesign).toContain('## 5. MVP 范围')
+    expect(productDesign).toContain('## 8. MVP 成功标准')
+    expect(productDesign).not.toMatch(/TODO|TBD/)
+  })
+
   it('默认显示族谱概览和主要导航', () => {
     render(<App />)
 
