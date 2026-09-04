@@ -151,3 +151,53 @@ def test_sibling_and_paternal_cousin_are_symmetric_relationships(tmp_path):
     assert reversed_cousin.status_code == 409
     assert path.status_code == 200
     assert path.json()["label"] == "堂姐妹"
+
+
+def test_person_attributes_and_sibling_type_round_trip(tmp_path):
+    with authenticated_client(tmp_path) as client:
+        first = client.post(
+            "/api/persons",
+            json={
+                "name": "贺志豪",
+                "gender": "male",
+                "birth_place": "湖南衡阳",
+                "courtesy_name": "守成",
+                "art_name": "归源",
+                "aliases": "阿豪",
+                "generation_name": "志",
+                "family_rank": "长子",
+                "occupation": "教师",
+            },
+        ).json()
+        second = create_person(client, "贺志兰", "female")
+        relation = client.post(
+            "/api/relationships",
+            json={
+                "kind": "sibling",
+                "sibling_type": "full",
+                "person_id": first["id"],
+                "relative_id": second["id"],
+            },
+        )
+
+    assert first["birth_place"] == "湖南衡阳"
+    assert first["generation_name"] == "志"
+    assert relation.status_code == 201
+    assert relation.json()["sibling_type"] == "full"
+
+
+def test_sibling_type_is_rejected_for_spouse(tmp_path):
+    with authenticated_client(tmp_path) as client:
+        first = create_person(client, "贺志豪", "male")
+        second = create_person(client, "管应拉", "female")
+        response = client.post(
+            "/api/relationships",
+            json={
+                "kind": "spouse",
+                "sibling_type": "full",
+                "person_id": first["id"],
+                "relative_id": second["id"],
+            },
+        )
+
+    assert response.status_code == 422

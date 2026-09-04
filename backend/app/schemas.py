@@ -21,6 +21,7 @@ class AuthResponse(BaseModel):
 
 VerificationStatus = Literal["verified", "unverified", "conflicting"]
 Gender = Literal["male", "female", "unknown"]
+SiblingType = Literal["full", "paternal_half", "maternal_half", "unknown"]
 RelativeType = Literal[
     "parents",
     "father",
@@ -38,6 +39,13 @@ class PersonCreate(BaseModel):
     birth_date: str | None = None
     death_date: str | None = None
     native_place: str | None = None
+    birth_place: str | None = None
+    courtesy_name: str | None = None
+    art_name: str | None = None
+    aliases: str | None = None
+    generation_name: str | None = None
+    family_rank: str | None = None
+    occupation: str | None = None
     biography: str | None = None
     verification_status: VerificationStatus = "unverified"
 
@@ -48,6 +56,13 @@ class PersonUpdate(BaseModel):
     birth_date: str | None = None
     death_date: str | None = None
     native_place: str | None = None
+    birth_place: str | None = None
+    courtesy_name: str | None = None
+    art_name: str | None = None
+    aliases: str | None = None
+    generation_name: str | None = None
+    family_rank: str | None = None
+    occupation: str | None = None
     biography: str | None = None
     verification_status: VerificationStatus | None = None
 
@@ -64,7 +79,16 @@ class RelationshipCreate(BaseModel):
     kind: Literal["parent", "spouse", "sibling", "paternal_cousin"]
     person_id: str
     relative_id: str
+    sibling_type: SiblingType | None = None
     verification_status: VerificationStatus = "unverified"
+
+    @model_validator(mode="after")
+    def validate_sibling_type(self) -> "RelationshipCreate":
+        if self.kind == "sibling" and self.sibling_type is None:
+            self.sibling_type = "unknown"
+        if self.kind != "sibling" and self.sibling_type is not None:
+            raise ValueError("只有兄弟姊妹关系可以设置关系类型")
+        return self
 
 
 class RelationshipResponse(RelationshipCreate):

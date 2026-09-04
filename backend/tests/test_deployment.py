@@ -8,7 +8,7 @@ import pytest
 import yaml
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 
 
 EXPECTED_TABLES = {
@@ -54,6 +54,51 @@ def test_initial_migration_creates_all_tables(tmp_path):
 
     tables = set(inspect(create_engine(f"sqlite:///{database}")).get_table_names())
     assert EXPECTED_TABLES <= tables
+
+
+def test_relationship_inference_migration_preserves_old_siblings(tmp_path):
+    database = tmp_path / "migration.db"
+    config = Config("backend/alembic.ini")
+    config.set_main_option("sqlalchemy.url", f"sqlite:///{database}")
+
+    command.upgrade(config, "0001_initial")
+    engine = create_engine(f"sqlite:///{database}")
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO persons (id, name, gender, verification_status, "
+                "created_at, updated_at) VALUES "
+                "('p1', '贺志豪', 'male', 'unverified', CURRENT_TIMESTAMP, "
+                "CURRENT_TIMESTAMP), "
+                "('p2', '贺志兰', 'female', 'unverified', CURRENT_TIMESTAMP, "
+                "CURRENT_TIMESTAMP)"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO relationships (id, kind, person_id, relative_id, "
+                "verification_status, created_at) VALUES "
+                "('r1', 'sibling', 'p1', 'p2', 'unverified', CURRENT_TIMESTAMP)"
+            )
+        )
+
+    command.upgrade(config, "head")
+
+    columns = {item["name"] for item in inspect(engine).get_columns("persons")}
+    with engine.connect() as connection:
+        sibling_type = connection.scalar(
+            text("SELECT sibling_type FROM relationships WHERE id='r1'")
+        )
+    assert {
+        "birth_place",
+        "courtesy_name",
+        "art_name",
+        "aliases",
+        "generation_name",
+        "family_rank",
+        "occupation",
+    } <= columns
+    assert sibling_type == "unknown"
 
 
 def test_backup_contains_database_dump_and_private_archives(tmp_path):
