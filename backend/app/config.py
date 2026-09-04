@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     admin_password: str = "change-me-before-production"
     session_cookie_secure: bool = False
     session_ttl_hours: int = 24
+    max_upload_bytes: int = 20 * 1024 * 1024
 
     model_config = SettingsConfigDict(
         env_prefix="GUIYUAN_",

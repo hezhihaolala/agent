@@ -77,3 +77,42 @@ class AuditLog(Base):
     entity_id: Mapped[str] = mapped_column(String(36), index=True)
     summary: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class Source(Base):
+    __tablename__ = "sources"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    title: Mapped[str] = mapped_column(String(200))
+    source_type: Mapped[str] = mapped_column(String(30), index=True)
+    era: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    provenance: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verification_status: Mapped[str] = mapped_column(String(30), default="unverified")
+    original_filename: Mapped[str] = mapped_column(String(255))
+    storage_name: Mapped[str] = mapped_column(String(100), unique=True)
+    media_type: Mapped[str] = mapped_column(String(100))
+    size_bytes: Mapped[int]
+    sha256: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+    links: Mapped[list["SourceLink"]] = relationship(
+        back_populates="source",
+        cascade="all, delete-orphan",
+    )
+
+
+class SourceLink(Base):
+    __tablename__ = "source_links"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    source_id: Mapped[str] = mapped_column(
+        ForeignKey("sources.id", ondelete="CASCADE"),
+        index=True,
+    )
+    entity_type: Mapped[str] = mapped_column(String(30), index=True)
+    entity_id: Mapped[str] = mapped_column(String(36), index=True)
+    field_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    source: Mapped[Source] = relationship(back_populates="links")

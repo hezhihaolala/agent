@@ -79,3 +79,38 @@ class AuditLogResponse(BaseModel):
     entity_id: str
     summary: str
     created_at: datetime
+
+
+class SourceLinkCreate(BaseModel):
+    entity_type: Literal["person", "relationship"]
+    entity_id: str
+    field_name: str | None = None
+
+
+class SourceLinkResponse(SourceLinkCreate):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    source_id: str
+    created_at: datetime
+
+
+class SourceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    title: str
+    source_type: Literal["image", "document", "text"]
+    era: str | None
+    provenance: str | None
+    notes: str | None
+    verification_status: VerificationStatus
+    original_filename: str
+    media_type: str
+    size_bytes: int
+    sha256: str
+    created_at: datetime
+
+
+class SourceDetailResponse(SourceResponse):
+    links: list[SourceLinkResponse]
