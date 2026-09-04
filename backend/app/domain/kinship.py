@@ -34,6 +34,10 @@ def _label(directions: list[str], path: list[str], people: dict[str, Any]) -> st
         return gendered("儿子", "女儿", "子女")
     if directions == ["spouse"]:
         return gendered("丈夫", "妻子", "配偶")
+    if directions == ["sibling"]:
+        return gendered("兄弟", "姐妹", "兄弟姊妹")
+    if directions == ["paternal_cousin"]:
+        return gendered("堂兄弟", "堂姐妹", "堂兄弟姊妹")
     if directions == ["up", "up"]:
         first_parent = people[path[1]]
         if _value(first_parent, "gender") == "female":
@@ -43,6 +47,10 @@ def _label(directions: list[str], path: list[str], people: dict[str, Any]) -> st
         return gendered("兄弟", "姐妹", "兄弟姐妹")
     if directions == ["down", "down"]:
         return gendered("孙子", "孙女", "孙辈")
+    if directions == ["up", "up", "down", "down"]:
+        first_parent = people[path[1]]
+        if _value(first_parent, "gender") == "male":
+            return gendered("堂兄弟", "堂姐妹", "堂兄弟姊妹")
     if directions == ["spouse", "up"]:
         spouse_gender = _value(people[path[1]], "gender")
         if spouse_gender == "female":
@@ -74,6 +82,9 @@ def find_relationship_path(
         elif kind == "spouse":
             graph[person_id].append((relative_id, "spouse"))
             graph[relative_id].append((person_id, "spouse"))
+        elif kind in {"sibling", "paternal_cousin"}:
+            graph[person_id].append((relative_id, kind))
+            graph[relative_id].append((person_id, kind))
 
     queue = deque([(source_id, [source_id], [])])
     visited = {source_id}

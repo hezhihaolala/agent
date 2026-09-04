@@ -174,6 +174,23 @@ describe('归源家族记忆助手', () => {
     expect(await screen.findByText('张明远 的父母是 陈素贞')).toBeInTheDocument()
   })
 
+  it('族谱页可以选择兄弟姊妹和堂兄弟姊妹关系', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/api/auth/me')) return response({ username: 'admin', csrf_token: 'csrf-token' })
+      return dataResponse(url, [person('p1', '贺志豪'), person('p2', '贺志兰')])
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+
+    const mainNav = await screen.findByRole('navigation', { name: '主导航' })
+    await user.click(within(mainNav).getByRole('button', { name: '族谱' }))
+
+    expect(screen.getByRole('option', { name: '兄弟姊妹关系' })).toHaveValue('sibling')
+    expect(screen.getByRole('option', { name: '堂兄弟姊妹关系' })).toHaveValue('paternal_cousin')
+  })
+
   it('设置页验证当前密码后提交新密码', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)

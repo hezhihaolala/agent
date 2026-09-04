@@ -52,7 +52,7 @@ class PersonResponse(PersonCreate):
 
 
 class RelationshipCreate(BaseModel):
-    kind: Literal["parent", "spouse"]
+    kind: Literal["parent", "spouse", "sibling", "paternal_cousin"]
     person_id: str
     relative_id: str
     verification_status: VerificationStatus = "unverified"

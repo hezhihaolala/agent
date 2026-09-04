@@ -116,3 +116,38 @@ def test_relationship_path_duplicate_and_cycle_validation(tmp_path):
         "陈素贞",
         "陈守义",
     ]
+
+
+def test_sibling_and_paternal_cousin_are_symmetric_relationships(tmp_path):
+    with authenticated_client(tmp_path) as client:
+        source = create_person(client, "贺志豪", "male")
+        sister = create_person(client, "贺志兰", "female")
+        cousin = create_person(client, "贺志梅", "female")
+
+        sibling = client.post(
+            "/api/relationships",
+            json={"kind": "sibling", "person_id": source["id"], "relative_id": sister["id"]},
+        )
+        reversed_sibling = client.post(
+            "/api/relationships",
+            json={"kind": "sibling", "person_id": sister["id"], "relative_id": source["id"]},
+        )
+        paternal_cousin = client.post(
+            "/api/relationships",
+            json={"kind": "paternal_cousin", "person_id": source["id"], "relative_id": cousin["id"]},
+        )
+        reversed_cousin = client.post(
+            "/api/relationships",
+            json={"kind": "paternal_cousin", "person_id": cousin["id"], "relative_id": source["id"]},
+        )
+        path = client.get(
+            "/api/relationships/path",
+            params={"source_id": source["id"], "target_id": cousin["id"]},
+        )
+
+    assert sibling.status_code == 201
+    assert reversed_sibling.status_code == 409
+    assert paternal_cousin.status_code == 201
+    assert reversed_cousin.status_code == 409
+    assert path.status_code == 200
+    assert path.json()["label"] == "堂姐妹"

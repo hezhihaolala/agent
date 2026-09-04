@@ -16,7 +16,7 @@ export type Person = {
 
 export type Relationship = {
   id: string
-  kind: 'parent' | 'spouse'
+  kind: 'parent' | 'spouse' | 'sibling' | 'paternal_cousin'
   person_id: string
   relative_id: string
   verification_status: VerificationStatus

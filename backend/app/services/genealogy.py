@@ -84,10 +84,10 @@ class GenealogyService:
             Relationship.person_id == payload.person_id,
             Relationship.relative_id == payload.relative_id,
         ]
-        if payload.kind == "spouse":
+        if payload.kind in {"spouse", "sibling", "paternal_cousin"}:
             duplicate = self.db.scalar(
                 select(Relationship).where(
-                    Relationship.kind == "spouse",
+                    Relationship.kind == payload.kind,
                     or_(
                         (
                             (Relationship.person_id == payload.person_id)

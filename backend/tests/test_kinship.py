@@ -69,3 +69,47 @@ def test_direct_and_sibling_labels_are_deterministic():
 
     assert parent is not None and parent.label == "父亲"
     assert sibling is not None and sibling.label == "兄弟"
+
+
+def test_explicit_sibling_and_paternal_cousin_labels_use_target_gender():
+    from backend.app.domain.kinship import find_relationship_path
+
+    people = [
+        Person("source", "贺志豪", "male"),
+        Person("sister", "贺志兰", "female"),
+        Person("cousin", "贺志梅", "female"),
+    ]
+    relationships = [
+        Relationship("sibling", "source", "sister"),
+        Relationship("paternal_cousin", "source", "cousin"),
+    ]
+
+    sibling = find_relationship_path(people, relationships, "source", "sister")
+    cousin = find_relationship_path(people, relationships, "source", "cousin")
+    reverse = find_relationship_path(people, relationships, "sister", "source")
+
+    assert sibling is not None and sibling.label == "姐妹"
+    assert cousin is not None and cousin.label == "堂姐妹"
+    assert reverse is not None and reverse.label == "兄弟"
+
+
+def test_paternal_cousin_is_derived_from_shared_paternal_grandparent():
+    from backend.app.domain.kinship import find_relationship_path
+
+    people = [
+        Person("source", "贺志豪", "male"),
+        Person("father", "贺万彬", "male"),
+        Person("grandfather", "贺守义", "male"),
+        Person("uncle", "贺万成", "male"),
+        Person("cousin", "贺志梅", "female"),
+    ]
+    relationships = [
+        Relationship("parent", "source", "father"),
+        Relationship("parent", "father", "grandfather"),
+        Relationship("parent", "uncle", "grandfather"),
+        Relationship("parent", "cousin", "uncle"),
+    ]
+
+    result = find_relationship_path(people, relationships, "source", "cousin")
+
+    assert result is not None and result.label == "堂姐妹"
