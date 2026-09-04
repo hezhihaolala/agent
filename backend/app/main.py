@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from sqlalchemy import select
 
 from .api.auth import router as auth_router
+from .api.genealogy import router as genealogy_router
 from .config import Settings
 from .database import Base, create_database
 from .models import AdminUser
@@ -47,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = app_settings
     app.state.session_factory = session_factory
     app.include_router(auth_router)
+    app.include_router(genealogy_router)
 
     @app.get("/api/health")
     def health_check() -> dict[str, str]:

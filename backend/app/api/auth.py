@@ -36,6 +36,24 @@ def get_current_session(
 CurrentSession = Annotated[AdminSession, Depends(get_current_session)]
 
 
+def require_csrf(
+    current: CurrentSession,
+    csrf_header: Annotated[str | None, Header(alias="X-CSRF-Token")] = None,
+    csrf_cookie: Annotated[str | None, Cookie(alias="guiyuan_csrf")] = None,
+) -> AdminSession:
+    if (
+        not csrf_header
+        or not csrf_cookie
+        or csrf_header != csrf_cookie
+        or hash_token(csrf_header) != current.csrf_hash
+    ):
+        raise HTTPException(status_code=403, detail="CSRF 校验失败")
+    return current
+
+
+WriteSession = Annotated[AdminSession, Depends(require_csrf)]
+
+
 @router.post("/login", response_model=AuthResponse)
 def login(payload: LoginRequest, request: Request, response: Response, db: DbSession):
     user = db.scalar(select(AdminUser).where(AdminUser.username == payload.username))
@@ -86,18 +104,8 @@ def current_user(
 def logout(
     response: Response,
     db: DbSession,
-    current: CurrentSession,
-    csrf_header: Annotated[str | None, Header(alias="X-CSRF-Token")] = None,
-    csrf_cookie: Annotated[str | None, Cookie(alias="guiyuan_csrf")] = None,
+    current: WriteSession,
 ):
-    if (
-        not csrf_header
-        or not csrf_cookie
-        or csrf_header != csrf_cookie
-        or hash_token(csrf_header) != current.csrf_hash
-    ):
-        raise HTTPException(status_code=403, detail="CSRF 校验失败")
-
     db.delete(current)
     db.commit()
     response.delete_cookie("guiyuan_session", path="/")

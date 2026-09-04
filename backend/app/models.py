@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -39,3 +39,41 @@ class AdminSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     user: Mapped[AdminUser] = relationship(back_populates="sessions")
+
+
+class Person(Base):
+    __tablename__ = "persons"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(100), index=True)
+    gender: Mapped[str] = mapped_column(String(20), default="unknown")
+    birth_date: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    death_date: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    native_place: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    biography: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verification_status: Mapped[str] = mapped_column(String(30), default="unverified")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Relationship(Base):
+    __tablename__ = "relationships"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    kind: Mapped[str] = mapped_column(String(20), index=True)
+    person_id: Mapped[str] = mapped_column(ForeignKey("persons.id"), index=True)
+    relative_id: Mapped[str] = mapped_column(ForeignKey("persons.id"), index=True)
+    verification_status: Mapped[str] = mapped_column(String(30), default="unverified")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("admin_users.id"), index=True)
+    action: Mapped[str] = mapped_column(String(100), index=True)
+    entity_type: Mapped[str] = mapped_column(String(50))
+    entity_id: Mapped[str] = mapped_column(String(36), index=True)
+    summary: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
