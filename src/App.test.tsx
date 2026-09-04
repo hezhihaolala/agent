@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import productDesign from '../docs/product-design.md?raw'
 import technicalDesign from '../docs/technical-design.md?raw'
+import implementationPlan from '../docs/superpowers/plans/2026-09-04-family-agent-mvp.md?raw'
 import { App } from './App'
 
 afterEach(cleanup)
@@ -23,6 +24,15 @@ describe('家谱智能体 Demo', () => {
     expect(technicalDesign).toContain('## 12. 测试策略')
     expect(technicalDesign).toContain('模型只能提出变更')
     expect(technicalDesign).not.toMatch(/TODO|TBD/)
+  })
+
+  it('实施计划覆盖技术方案的六个交付阶段', () => {
+    expect(implementationPlan).toContain('Task 1: Backend Foundation')
+    expect(implementationPlan).toContain('Task 2: People, Relationships')
+    expect(implementationPlan).toContain('Task 3: Private Archives')
+    expect(implementationPlan).toContain('Task 4: Model Adapter')
+    expect(implementationPlan).toContain('Task 5: Connect the React Interface')
+    expect(implementationPlan).toContain('Task 6: Migrations, Production Deployment')
   })
 
   it('默认显示族谱概览和主要导航', () => {
