@@ -1,30 +1,69 @@
-# 归源 · 家族记忆助手 Demo
+# 归源 · 家族记忆助手
 
-面向单管理员的中文族谱智能体界面原型。当前版本只使用浏览器内的模拟数据，不连接数据库，也不会调用真实的大模型 API。
+面向单管理员的中文族谱 Web 应用。它可以维护人物、父母/配偶关系和私密档案，通过确定性规则回答亲属关系，并让托管模型把自然语言整理为待确认草稿。模型不能直接写正式数据。
 
-## 本地运行
+## 已实现
+
+- 单管理员登录、服务端会话和 CSRF 防护。
+- 人物增删改查、父母/配偶关系维护、重复与祖先循环校验。
+- 确定性亲属路径和常见中文称谓。
+- PDF、图片、文字资料私密上传、哈希校验、鉴权下载和证据关联。
+- OpenAI 兼容 Chat Completions 适配层、来源支撑回答、重名与冲突提示。
+- 智能体变更草稿、确认前重新校验、事务写入和审计日志。
+- React 中文管理界面、Alembic 迁移、Docker Compose、Caddy HTTPS、备份与恢复脚本。
+
+## 本地开发
+
+需要 Node.js 20+ 与 Python 3.12+。
 
 ```bash
-npm install
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m pip install -e "backend[test]"
+npm ci
+```
+
+可在项目根目录创建未提交的 `.env`：
+
+```dotenv
+GUIYUAN_ADMIN_PASSWORD=your-local-admin-password
+GUIYUAN_MODEL_API_KEY=your-provider-key
+GUIYUAN_MODEL_BASE_URL=https://provider.example/v1
+GUIYUAN_MODEL_NAME=provider-model-name
+```
+
+分别启动后端和前端：
+
+```bash
+python -m alembic -c backend/alembic.ini upgrade head
+python -m uvicorn backend.app.main:app --reload
 npm run dev
 ```
 
-浏览器打开终端显示的本地地址即可查看。
+浏览器打开 `http://127.0.0.1:5173`。Vite 会把 `/api` 转发到本地 FastAPI。开发环境未配置模型时，普通族谱管理仍可使用，智能体查询会显示模型未配置。
 
-## 可体验流程
-
-- 在“概览”查看家族人数、代数、资料与待核实事项
-- 在“智能体”提问“张明远的外祖父是谁？”，查看关系路径与资料依据
-- 点击“模拟录入成员”，核对变更预览后确认写入
-- 浏览族谱、资料档案和单管理员设置页面
-
-## 验证
+## 测试
 
 ```bash
-npm test
-npm run build
+npm run test:all
 ```
 
-这是用于确认信息架构、视觉风格和核心操作流程的前端 Demo。待界面与流程确认后，再接入真实后端、族谱数据模型和 OpenAI 兼容 API。
+浏览器端到端测试需要 Playwright 浏览器：
 
-产品整体方向与 MVP 范围见 [产品设计文档](docs/product-design.md)，系统实现边界见 [技术方案](docs/technical-design.md)。
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+本项目也可以通过 `PLAYWRIGHT_EXECUTABLE_PATH` 使用系统 Chrome/Edge，通过 `E2E_API_COMMAND` 指定测试 API 启动命令。
+
+## 生产部署与备份
+
+复制 `.env.example` 为 `.env`，替换所有示例密钥后执行：
+
+```bash
+docker compose config
+docker compose up -d --build
+```
+
+完整的首次部署、更新、备份和安全恢复流程见 [部署文档](docs/deployment.md)。产品边界见 [产品设计文档](docs/product-design.md)，架构决策见 [技术方案](docs/technical-design.md)。

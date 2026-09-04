@@ -1,0 +1,68 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-guiyuan}
+      POSTGRES_USER: ${POSTGRES_USER:-guiyuan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      GUIYUAN_ENVIRONMENT: production
+      GUIYUAN_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-guiyuan}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-guiyuan}
+      GUIYUAN_ARCHIVE_DIR: /app/data/archives
+      GUIYUAN_ADMIN_USERNAME: ${GUIYUAN_ADMIN_USERNAME:-admin}
+      GUIYUAN_ADMIN_PASSWORD: ${GUIYUAN_ADMIN_PASSWORD:?set GUIYUAN_ADMIN_PASSWORD in .env}
+      GUIYUAN_SESSION_COOKIE_SECURE: "true"
+      GUIYUAN_MODEL_API_KEY: ${GUIYUAN_MODEL_API_KEY:-}
+      GUIYUAN_MODEL_BASE_URL: ${GUIYUAN_MODEL_BASE_URL:-}
+      GUIYUAN_MODEL_NAME: ${GUIYUAN_MODEL_NAME:-gpt-4o-mini}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-guiyuan}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-guiyuan}
+      ARCHIVE_DIR: /app/data/archives
+    volumes:
+      - archives:/app/data/archives
+      - ./backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    environment:
+      GUIYUAN_DOMAIN: ${GUIYUAN_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  archives:
+  caddy_data:
+  caddy_config:

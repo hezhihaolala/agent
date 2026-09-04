@@ -7,7 +7,9 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && vite build",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:backend": "python -m pytest backend/tests -q",
+    "test:e2e": "playwright test",
+    "test:all": "npm test && npm run test:backend && npm run build"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

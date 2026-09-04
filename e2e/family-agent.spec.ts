@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test('登录、建关系、关系问答和草稿确认构成完整流程', async ({ page }) => {
+  const consoleErrors: string[] = []
   const suffix = Date.now().toString().slice(-6)
   const childName = `测试子${suffix}`
   const motherName = `测试母${suffix}`
@@ -10,6 +11,7 @@ test('登录、建关系、关系问答和草稿确认构成完整流程', async
   await page.getByLabel('密码').fill('e2e-password')
   await page.getByRole('button', { name: '登录归源' }).click()
   await expect(page.getByRole('heading', { name: '家族概览' })).toBeVisible()
+  page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()) })
 
   for (const [name, gender] of [[childName, 'male'], [motherName, 'female']] as const) {
     await page.getByRole('button', { name: '＋ 新增成员' }).click()
@@ -47,4 +49,10 @@ test('登录、建关系、关系问答和草稿确认构成完整流程', async
   await expect(page.getByRole('heading', { name: '变更预览' })).toBeVisible()
   await page.getByRole('button', { name: '确认写入' }).click()
   await expect(page.getByRole('heading', { name: '已写入族谱' })).toBeVisible()
+
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('navigation', { name: '移动端导航' }).getByRole('button', { name: '概览' }).click()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  expect(consoleErrors).toEqual([])
 })
