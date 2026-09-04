@@ -8,3 +8,5 @@ __pycache__/
 *.py[cod]
 .coverage
 data/
+test-results/
+playwright-report/
